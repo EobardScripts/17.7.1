@@ -9,7 +9,7 @@ import (
 
 func worker(c *counter.Counter, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for i := 0; ; i++ {
+	for {
 		if ok := c.Add(1); !ok {
 			break
 		}
