@@ -1,41 +1,49 @@
 package counter
 
+import (
+	"context"
+	"sync"
+)
+
 type Counter struct {
-	value  int
-	limit  int
-	txDone chan bool
+	value     int
+	limit     int
+	increment chan int
 }
 
 func NewCounter(limit int) *Counter {
 	c := Counter{
-		limit:  limit,
-		value:  0,
-		txDone: make(chan bool, 1),
+		limit:     limit,
+		value:     0,
+		increment: make(chan int, limit),
 	}
-	c.txDone <- true
 	return &c
 }
 
-func (c *Counter) Add(amount int) bool {
-	<-c.txDone
-
+func (c *Counter) Add(amount int, ctx context.Context, cancel context.CancelFunc) {
 	if c.value >= c.limit {
-		c.txDone <- true
-		return false
+		ctx.Done()
+		cancel()
 	}
 
-	c.value += amount
-	c.txDone <- true
-	return true
+	c.increment <- amount
+}
+
+func (c *Counter) Increment(wg *sync.WaitGroup, cancel context.CancelFunc) {
+	defer wg.Done()
+	for step := range c.increment {
+		if c.value < c.limit {
+			c.value += step
+		} else {
+			cancel()
+		}
+	}
 }
 
 func (c *Counter) Value() int {
-	<-c.txDone
-	v := c.value
-	c.txDone <- true
-	return v
+	return c.value
 }
 
 func (c *Counter) CloseChannel() {
-	close(c.txDone)
+	close(c.increment)
 }

@@ -2,22 +2,29 @@ package main
 
 import (
 	counter "1771/pkg/counterStruct"
+	"context"
 	"fmt"
 	"log"
 	"sync"
 )
 
-func worker(c *counter.Counter, wg *sync.WaitGroup) {
+func worker(ctx context.Context, cancel context.CancelFunc, c *counter.Counter, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
-		if ok := c.Add(1); !ok {
-			break
+		c.Add(1, ctx, cancel)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+
 		}
 	}
 }
 
 func main() {
 	var wg sync.WaitGroup
+	var wgChan sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
 
 	amountOfThreads := 0
 	maxValue := 0
@@ -41,16 +48,20 @@ func main() {
 	if maxValue < 1 {
 		log.Fatalln("Максимальное значение счетчика не может быть меньше 1")
 	}
+
 	c := counter.NewCounter(maxValue)
 
-	wg.Add(amountOfThreads)
 	for id := 0; id < amountOfThreads; id++ {
-		go worker(c, &wg)
+		wg.Add(1)
+		go worker(ctx, cancel, c, &wg)
 	}
+	go c.Increment(&wgChan, cancel)
+	wgChan.Add(1)
 	wg.Wait()
+	c.CloseChannel()
+	wgChan.Wait()
 
 	// Печатаем значение счетчика
 	fmt.Println("Counter:", c.Value())
 	//Закрываем канал
-	c.CloseChannel()
 }
