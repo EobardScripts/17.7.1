@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-func worker(id int, c *counter.Counter, wg *sync.WaitGroup) {
+func worker(c *counter.Counter, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for i := 0; ; i++ {
 		if ok := c.Add(1); !ok {
@@ -45,7 +45,7 @@ func main() {
 
 	wg.Add(amountOfThreads)
 	for id := 0; id < amountOfThreads; id++ {
-		go worker(id, c, &wg)
+		go worker(c, &wg)
 	}
 	wg.Wait()
 
