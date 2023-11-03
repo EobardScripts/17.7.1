@@ -1,12 +1,24 @@
 package main
 
 import (
-	"1771/pkg/counterStruct"
+	counter "1771/pkg/counterStruct"
 	"fmt"
 	"log"
+	"sync"
 )
 
+func worker(id int, c *counter.Counter, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for i := 0; ; i++ {
+		if ok := c.Add(1); !ok {
+			break
+		}
+	}
+}
+
 func main() {
+	var wg sync.WaitGroup
+
 	amountOfThreads := 0
 	maxValue := 0
 
@@ -29,12 +41,14 @@ func main() {
 	if maxValue < 1 {
 		log.Fatalln("Максимальное значение счетчика не может быть меньше 1")
 	}
+	c := counter.NewCounter(maxValue)
 
-	counter := counterStruct.NewCounter(maxValue)
-	for i := 0; i < amountOfThreads; i++ {
-		counter.Add(1)
-		go counter.Increment()
+	wg.Add(amountOfThreads)
+	for id := 0; id < amountOfThreads; id++ {
+		go worker(id, c, &wg)
 	}
+	wg.Wait()
 
-	counter.Wait()
+	// Печатаем значение счетчика
+	fmt.Println("Counter:", c.Value())
 }
