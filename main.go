@@ -51,4 +51,6 @@ func main() {
 
 	// Печатаем значение счетчика
 	fmt.Println("Counter:", c.Value())
+	//Закрываем канал
+	c.CloseChannel()
 }

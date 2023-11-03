@@ -35,3 +35,7 @@ func (c *Counter) Value() int {
 	c.txDone <- true
 	return v
 }
+
+func (c *Counter) CloseChannel() {
+	close(c.txDone)
+}
